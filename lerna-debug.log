@@ -1,0 +1,61 @@
+0 silly input [ 'test' ]
+1 silly flags { _: [ 'run' ],
+1 silly flags   'reject-cycles': false,
+1 silly flags   rejectCycles: false,
+1 silly flags   stream: true,
+1 silly flags   scope: '@aragon/apps-*',
+1 silly flags   concurrency: 1,
+1 silly flags   script: 'test',
+1 silly flags   args: [] }
+2 verbose rootPath /home/jgcarv/Dev/Ethereum/Aragon/Aragon-Voting-Suite
+3 info version 2.11.0
+4 silly existsSync /home/jgcarv/Dev/Ethereum/Aragon/Aragon-Voting-Suite/VERSION
+5 info versioning independent
+6 info scope @aragon/apps-*
+7 silly initialize attempt
+8 silly initialize success
+9 silly execute attempt
+10 silly runScriptInPackageStreaming [ 'test', [], '@aragon/apps-shared-migrations' ]
+11 silly getExecOpts { cwd:
+11 silly getExecOpts    '/home/jgcarv/Dev/Ethereum/Aragon/Aragon-Voting-Suite/shared/migrations' }
+12 silly runScriptInPackageStreaming [ 'test', [], '@aragon/apps-voting' ]
+13 silly getExecOpts { cwd:
+13 silly getExecOpts    '/home/jgcarv/Dev/Ethereum/Aragon/Aragon-Voting-Suite/apps/voting' }
+14 error execute callback with error
+15 error Error: Command failed: npm run test
+15 error sh: 1: ./node_modules/@aragon/test-helpers/ganache-cli.sh: not found
+15 error npm ERR! file sh
+15 error npm ERR! code ELIFECYCLE
+15 error npm ERR! errno ENOENT
+15 error npm ERR! syscall spawn
+15 error npm ERR! @aragon/apps-voting@2.0.0 ganache-cli:test: `./node_modules/@aragon/test-helpers/ganache-cli.sh`
+15 error npm ERR! spawn ENOENT
+15 error npm ERR!
+15 error npm ERR! Failed at the @aragon/apps-voting@2.0.0 ganache-cli:test script.
+15 error npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
+15 error npm WARN Local package.json exists, but node_modules missing, did you mean to install?
+15 error
+15 error npm ERR! A complete log of this run can be found in:
+15 error npm ERR!     /home/jgcarv/.npm/_logs/2019-01-30T19_14_29_413Z-debug.log
+15 error npm ERR! code ELIFECYCLE
+15 error npm ERR! errno 1
+15 error npm ERR! @aragon/apps-voting@2.0.0 test: `TRUFFLE_TEST=true npm run ganache-cli:test`
+15 error npm ERR! Exit status 1
+15 error npm ERR!
+15 error npm ERR! Failed at the @aragon/apps-voting@2.0.0 test script.
+15 error npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
+15 error npm WARN Local package.json exists, but node_modules missing, did you mean to install?
+15 error
+15 error npm ERR! A complete log of this run can be found in:
+15 error npm ERR!     /home/jgcarv/.npm/_logs/2019-01-30T19_14_29_422Z-debug.log
+15 error
+15 error
+15 error > @aragon/apps-voting@2.0.0 test /home/jgcarv/Dev/Ethereum/Aragon/Aragon-Voting-Suite/apps/voting
+15 error > TRUFFLE_TEST=true npm run ganache-cli:test
+15 error
+15 error
+15 error > @aragon/apps-voting@2.0.0 ganache-cli:test /home/jgcarv/Dev/Ethereum/Aragon/Aragon-Voting-Suite/apps/voting
+15 error > ./node_modules/@aragon/test-helpers/ganache-cli.sh
+15 error
+15 error
+15 error     at Promise.all.then.arr (/home/jgcarv/Dev/Ethereum/Aragon/Aragon-Voting-Suite/node_modules/execa/index.js:236:11)
