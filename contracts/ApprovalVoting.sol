@@ -6,14 +6,13 @@ pragma solidity >=0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/common/IForwarder.sol";
-
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 
 
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
-contract Voting is IForwarder, AragonApp {
+contract ApprovalVoting is IForwarder, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
 

@@ -13,7 +13,7 @@ import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 
 
-contract Voting is IForwarder, AragonApp {
+contract QuadraticVoting is IForwarder, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
 
@@ -53,7 +53,7 @@ contract Voting is IForwarder, AragonApp {
     MiniMeToken public token;
     uint64 public supportRequired;
     uint64 public voteTime;
-    uint64 public votingPoints = 64;
+    uint64 public votingPoints;
     uint64 public votingTerm; //How long a voting term lasts
     uint64 public votingTermStart;
 
@@ -204,19 +204,19 @@ function changeSupportRequired(uint64 _supportRequired)
         _executeVote(_voteId, _executionScript);
     }
 
-    // function isForwarder() public pure returns (bool) {
-    //     return true;
-    // }
-    //
-    // function forward(bytes _evmScript) public {
-    //     require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
-    //     _newVote(_evmScript, "", true, true);
-    // }
-    //
-    // function canForward(address _sender, bytes) public view returns (bool) {
-    //     // Note that `canPerform()` implicitly does an initialization check itself
-    //     return canPerform(_sender, CREATE_VOTES_ROLE, arr());
-    // }
+    function isForwarder() public pure returns (bool) {
+        return true;
+    }
+
+    function forward(bytes _evmScript) public {
+        require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
+        //_newVote(bytes32(_evmScriptHash), "", true);
+    }
+
+    function canForward(address _sender, bytes _evmScript) public view returns (bool) {
+        // Note that `canPerform()` implicitly does an initialization check itself
+        return canPerform(_sender, CREATE_VOTES_ROLE, arr());
+    }
 
     function canVote(uint256 _voteId, address _voter) public view voteExists(_voteId) returns (bool) {
         Vote storage vote_ = votes[_voteId];
