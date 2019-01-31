@@ -1,9 +1,0 @@
-{
-  "lerna": "2.4.0",
-  "packages": [
-    "apps/*",
-    "future-apps/*",
-    "shared/*"
-  ],
-  "version": "independent"
-}
