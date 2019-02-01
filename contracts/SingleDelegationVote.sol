@@ -12,29 +12,16 @@ import "./Utils/Voting.sol";
 
 contract SingleDelegationVote is Voting {
 
-  // using SafeMath for uint256;
-  // using SafeMath64 for uint64;
-    //
-    // MiniMeToken public token;
-    // uint64 public supportRequiredPct;
-    // uint64 public minAcceptQuorumPct;
-    // uint64 public voteTime;
-    //
-    // // We are mimicing an array, we use a mapping instead to make app upgrade more graceful
-    // mapping (uint256 => Vote) internal votes;
-    // uint256 public votesLength;
-
 
     // SINGLE DELEGATION DATA STRUCTURES
     mapping (address => address) public representatives;
-    mapping (address => uint256) public gasCreditsBalance;
-
     mapping (address => mapping(uint256 => address)) public representeds;
     mapping (address => uint256) representedsLength;
 
     mapping (uint256 => mapping(address => bool)) public voted;
     mapping (uint256 => mapping(address => uint256)) public votedStake;
 
+    mapping (address => uint256) public gasCreditsBalance;
   /**
     ------------------------------------------------------
 
@@ -102,6 +89,7 @@ contract SingleDelegationVote is Voting {
     uint256 _index = representedsLength[_representative];
     representeds[_representative][_index] = msg.sender;
     representedsLength[_representative]++;
+    emit VoteDelegated(msg.sender, _representative);
   }
 
 
@@ -124,10 +112,10 @@ contract SingleDelegationVote is Voting {
       msg.sender.transfer(_amount);
     }
 
-    function transferGasCredits(address from, address to, uint256 amount) internal {
-      require(amount <= gasCreditsBalance[from]);
-      gasCreditsBalance[from] = gasCreditsBalance[from].sub(amount);
-      gasCreditsBalance[to] = gasCreditsBalance[to].add(amount);
+    function transferGasCredits(address _from, address _to, uint256 _amount) internal {
+      require(_amount <= gasCreditsBalance[_from], "Not Enough balance");
+      gasCreditsBalance[_to] = gasCreditsBalance[_to].add(_amount);
+      gasCreditsBalance[_from] = gasCreditsBalance[_from].sub(_amount);
     }
 
 
@@ -168,7 +156,7 @@ contract SingleDelegationVote is Voting {
 
       -------------------------------------------------------
     **/
-
+event DEBUG(uint value);
   function _voteAsIndividual(
     uint256 _voteId,
     bool _supports,
@@ -178,19 +166,14 @@ contract SingleDelegationVote is Voting {
       Vote storage vote_ = votes[_voteId];
       VoterState option = _supports ? VoterState.Yea : VoterState.Nay;
       address _representative = representatives[_voter];
-
-      uint256 stake;
+      uint256 stake = token.balanceOfAt(_voter, vote_.snapshotBlock);
       if(_representative == address(0) || !voted[_voteId][_representative]) {
         //If you'r voting for yourself
-        stake = token.balanceOfAt(_voter, vote_.snapshotBlock);
           if(_supports) {
-            vote_.yea = vote_.nay.add(stake);
+            vote_.yea = vote_.yea.add(stake);
           } else {
             vote_.nay = vote_.nay.add(stake);
           }
-
-          votedStake[_voteId][_voter] = votedStake[_voteId][_voter].add(stake);
-          voted[_voteId][_voter] = true; //Setting this will avoid your representative from voting for you
       }
 
       //If you have a representative and she already voted
@@ -198,21 +181,21 @@ contract SingleDelegationVote is Voting {
         // If your votes are the same
           if (vote_.voters[_representative] == option) { return; }
         // else
-        stake = token.balanceOfAt(_voter, vote_.snapshotBlock);
+
         votedStake[_voteId][_representative] = votedStake[_voteId][_representative].sub(stake);
-        votedStake[_voteId][_voter] = votedStake[_voteId][_voter].add(stake);
-        voted[_voteId][_voter] = true;
 
         if(option == VoterState.Yea) {
           vote_.nay = vote_.nay.sub(stake);
-          vote_.yea = vote_.nay.add(stake);
+          vote_.yea = vote_.yea.add(stake);
         } else {
           vote_.nay = vote_.nay.add(stake);
-          vote_.yea = vote_.nay.sub(stake);
+          vote_.yea = vote_.yea.sub(stake);
         }
       }
 
-      vote_.voters[_voter] = _supports ? VoterState.Yea : VoterState.Nay;
+      votedStake[_voteId][_voter] = votedStake[_voteId][_voter].add(stake);
+      voted[_voteId][_voter] = true;
+      vote_.voters[_voter] = option;
 
       emit CastVote(_voteId, _voter, _supports, stake);
  }
@@ -228,8 +211,6 @@ contract SingleDelegationVote is Voting {
 
     // This could re-enter, though we can assume the governance token is not malicious
     uint256 voterStake = getDelegatorStake(_voteId, vote_.snapshotBlock);
-    VoterState state = vote_.voters[_voter];
-
 
     if (_supports) {
         vote_.yea = vote_.yea.add(voterStake);
@@ -237,8 +218,10 @@ contract SingleDelegationVote is Voting {
         vote_.nay = vote_.nay.add(voterStake);
     }
 
-    vote_.voters[_voter] = _supports ? VoterState.Yea : VoterState.Nay;
+    votedStake[_voteId][_voter] = votedStake[_voteId][_voter].add(voterStake);
+    voted[_voteId][_voter] = true;
+    vote_.voters[_voter] = option;
 
-    emit CastVote(_voteId, _voter, _supports, voterStake);
+    emit DelegatedVoteCast(_voteId, _voter,msg.sender, _supports, voterStake);
   }
 }

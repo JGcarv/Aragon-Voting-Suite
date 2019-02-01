@@ -61,8 +61,8 @@ contract Voting is IForwarder, AragonApp {
     event StartVote(uint256 indexed voteId, address indexed creator, string metadata);
     event CastVote(uint256 indexed voteId, address indexed voter, bool supports, uint256 stake);
     event ExecuteVote(uint256 indexed voteId);
-    event ChangeSupportRequired(uint64 supportRequiredPct);
-    event ChangeMinQuorum(uint64 minAcceptQuorumPct);
+    event VoteDelegated(address represented,address delegator);
+    event DelegatedVoteCast(uint256 indexed voteId, address indexed voter, address indexed delegator, bool supports, uint256 stake);
 
     modifier voteExists(uint256 _voteId) {
         require(_voteId < votesLength, ERROR_NO_VOTE);
@@ -96,34 +96,34 @@ contract Voting is IForwarder, AragonApp {
         voteTime = _voteTime;
     }
 
-    /**
-    * @notice Change required support to `@formatPct(_supportRequiredPct)`%
-    * @param _supportRequiredPct New required support
-    */
-    function changeSupportRequiredPct(uint64 _supportRequiredPct)
-        external
-        authP(MODIFY_SUPPORT_ROLE, arr(uint256(_supportRequiredPct), uint256(supportRequiredPct)))
-    {
-        require(minAcceptQuorumPct <= _supportRequiredPct, ERROR_CHANGE_SUPPORT_PCTS);
-        require(_supportRequiredPct < PCT_BASE, ERROR_CHANGE_SUPPORT_TOO_BIG);
-        supportRequiredPct = _supportRequiredPct;
-
-        emit ChangeSupportRequired(_supportRequiredPct);
-    }
-
-    /**
-    * @notice Change minimum acceptance quorum to `@formatPct(_minAcceptQuorumPct)`%
-    * @param _minAcceptQuorumPct New acceptance quorum
-    */
-    function changeMinAcceptQuorumPct(uint64 _minAcceptQuorumPct)
-        external
-        authP(MODIFY_QUORUM_ROLE, arr(uint256(_minAcceptQuorumPct), uint256(minAcceptQuorumPct)))
-    {
-        require(_minAcceptQuorumPct <= supportRequiredPct, ERROR_CHANGE_QUORUM_PCTS);
-        minAcceptQuorumPct = _minAcceptQuorumPct;
-
-        emit ChangeMinQuorum(_minAcceptQuorumPct);
-    }
+    // /**
+    // * @notice Change required support to `@formatPct(_supportRequiredPct)`%
+    // * @param _supportRequiredPct New required support
+    // */
+    // function changeSupportRequiredPct(uint64 _supportRequiredPct)
+    //     external
+    //     authP(MODIFY_SUPPORT_ROLE, arr(uint256(_supportRequiredPct), uint256(supportRequiredPct)))
+    // {
+    //     require(minAcceptQuorumPct <= _supportRequiredPct, ERROR_CHANGE_SUPPORT_PCTS);
+    //     require(_supportRequiredPct < PCT_BASE, ERROR_CHANGE_SUPPORT_TOO_BIG);
+    //     supportRequiredPct = _supportRequiredPct;
+    //
+    //     emit ChangeSupportRequired(_supportRequiredPct);
+    // }
+    //
+    // /**
+    // * @notice Change minimum acceptance quorum to `@formatPct(_minAcceptQuorumPct)`%
+    // * @param _minAcceptQuorumPct New acceptance quorum
+    // */
+    // function changeMinAcceptQuorumPct(uint64 _minAcceptQuorumPct)
+    //     external
+    //     authP(MODIFY_QUORUM_ROLE, arr(uint256(_minAcceptQuorumPct), uint256(minAcceptQuorumPct)))
+    // {
+    //     require(_minAcceptQuorumPct <= supportRequiredPct, ERROR_CHANGE_QUORUM_PCTS);
+    //     minAcceptQuorumPct = _minAcceptQuorumPct;
+    //
+    //     emit ChangeMinQuorum(_minAcceptQuorumPct);
+    // }
 
     /**
     * @notice Create a new vote about "`_metadata`"
@@ -143,7 +143,7 @@ contract Voting is IForwarder, AragonApp {
     * @param _executesIfDecided Whether to also immediately execute newly created vote if decided
     * @return voteId id for newly created vote
     */
-    function newVote(bytes _executionScript, string _metadata, bool _castVote, bool _executesIfDecided)
+    function newVoteExt(bytes _executionScript, string _metadata, bool _castVote, bool _executesIfDecided)
         external
         auth(CREATE_VOTES_ROLE)
         returns (uint256 voteId)
@@ -185,8 +185,8 @@ contract Voting is IForwarder, AragonApp {
     * @param _evmScript Start vote with script
     */
     function forward(bytes _evmScript) public {
-        require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
-        _newVote(_evmScript, "", true, true);
+        // require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
+        // _newVote(_evmScript, "", true, true);
     }
 
     function canForward(address _sender, bytes) public view returns (bool) {
@@ -201,33 +201,33 @@ contract Voting is IForwarder, AragonApp {
     }
 
     function canExecute(uint256 _voteId) public view voteExists(_voteId) returns (bool) {
-        Vote storage vote_ = votes[_voteId];
-
-        if (vote_.executed) {
-            return false;
-        }
-
-        // Voting is already decided
-        if (_isValuePct(vote_.yea, vote_.votingPower, vote_.supportRequiredPct)) {
-            return true;
-        }
-
-        uint256 totalVotes = vote_.yea.add(vote_.nay);
-
-        // Vote ended?
-        if (_isVoteOpen(vote_)) {
-            return false;
-        }
-        // Has enough support?
-        if (!_isValuePct(vote_.yea, totalVotes, vote_.supportRequiredPct)) {
-            return false;
-        }
-        // Has min quorum?
-        if (!_isValuePct(vote_.yea, vote_.votingPower, vote_.minAcceptQuorumPct)) {
-            return false;
-        }
-
-        return true;
+        // Vote storage vote_ = votes[_voteId];
+        //
+        // if (vote_.executed) {
+        //     return false;
+        // }
+        //
+        // // Voting is already decided
+        // if (_isValuePct(vote_.yea, vote_.votingPower, vote_.supportRequiredPct)) {
+        //     return true;
+        // }
+        //
+        // uint256 totalVotes = vote_.yea.add(vote_.nay);
+        //
+        // // Vote ended?
+        // if (_isVoteOpen(vote_)) {
+        //     return false;
+        // }
+        // // Has enough support?
+        // if (!_isValuePct(vote_.yea, totalVotes, vote_.supportRequiredPct)) {
+        //     return false;
+        // }
+        // // Has min quorum?
+        // if (!_isValuePct(vote_.yea, vote_.votingPower, vote_.minAcceptQuorumPct)) {
+        //     return false;
+        // }
+        //
+         return true;
     }
 
     function getVote(uint256 _voteId)
@@ -262,7 +262,7 @@ contract Voting is IForwarder, AragonApp {
     }
 
     function getVoterState(uint256 _voteId, address _voter) public view voteExists(_voteId) returns (VoterState) {
-        return votes[_voteId].voters[_voter];
+         return votes[_voteId].voters[_voter];
     }
 
     function _newVote(bytes _executionScript, string _metadata, bool _castVote, bool _executesIfDecided)
@@ -295,32 +295,32 @@ contract Voting is IForwarder, AragonApp {
         bool _executesIfDecided
     ) internal
     {
-        Vote storage vote_ = votes[_voteId];
-
-        // This could re-enter, though we can assume the governance token is not malicious
-        uint256 voterStake = token.balanceOfAt(_voter, vote_.snapshotBlock);
-        VoterState state = vote_.voters[_voter];
-
-        // If voter had previously voted, decrease count
-        if (state == VoterState.Yea) {
-            vote_.yea = vote_.yea.sub(voterStake);
-        } else if (state == VoterState.Nay) {
-            vote_.nay = vote_.nay.sub(voterStake);
-        }
-
-        if (_supports) {
-            vote_.yea = vote_.yea.add(voterStake);
-        } else {
-            vote_.nay = vote_.nay.add(voterStake);
-        }
-
-        vote_.voters[_voter] = _supports ? VoterState.Yea : VoterState.Nay;
-
-        emit CastVote(_voteId, _voter, _supports, voterStake);
-
-        if (_executesIfDecided && canExecute(_voteId)) {
-            _executeVote(_voteId);
-        }
+        // Vote storage vote_ = votes[_voteId];
+        //
+        // // This could re-enter, though we can assume the governance token is not malicious
+        // uint256 voterStake = token.balanceOfAt(_voter, vote_.snapshotBlock);
+        // VoterState state = vote_.voters[_voter];
+        //
+        // // If voter had previously voted, decrease count
+        // if (state == VoterState.Yea) {
+        //     vote_.yea = vote_.yea.sub(voterStake);
+        // } else if (state == VoterState.Nay) {
+        //     vote_.nay = vote_.nay.sub(voterStake);
+        // }
+        //
+        // if (_supports) {
+        //     vote_.yea = vote_.yea.add(voterStake);
+        // } else {
+        //     vote_.nay = vote_.nay.add(voterStake);
+        // }
+        //
+        // vote_.voters[_voter] = _supports ? VoterState.Yea : VoterState.Nay;
+        //
+        // emit CastVote(_voteId, _voter, _supports, voterStake);
+        //
+        // if (_executesIfDecided && canExecute(_voteId)) {
+        //     _executeVote(_voteId);
+        // }
     }
 
     function _executeVote(uint256 _voteId) internal {
