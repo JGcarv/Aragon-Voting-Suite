@@ -189,36 +189,32 @@ contract ApprovalVoting is IForwarder, AragonApp {
         return true;
     }
 
-    // function getVote(uint256 _voteId)
-    //     public
-    //     view
-    //     voteExists(_voteId)
-    //     returns (
-    //         bool open,
-    //         bool executed,
-    //         uint64 startDate,
-    //         uint64 snapshotBlock,
-    //         uint64 supportRequired,
-    //         uint64 minAcceptQuorum,
-    //         uint256 yea,
-    //         uint256 nay,
-    //         uint256 votingPower,
-    //         bytes script
-    //     )
-    // {
-    //     Vote storage vote_ = votes[_voteId];
-    //
-    //     open = _isVoteOpen(vote_);
-    //     executed = vote_.executed;
-    //     startDate = vote_.startDate;
-    //     snapshotBlock = vote_.snapshotBlock;
-    //     supportRequired = vote_.supportRequiredPct;
-    //     minAcceptQuorum = vote_.minAcceptQuorumPct;
-    //     yea = vote_.yea;
-    //     nay = vote_.nay;
-    //     votingPower = vote_.votingPower;
-    //     script = vote_.executionScript;
-    // }
+    function getVote(uint256 _voteId)
+        public
+        view
+        voteExists(_voteId)
+        returns (
+          bool open,
+          bool executed,
+          uint64 startDate,
+          uint64 snapshotBlock,
+          uint64 acceptQuorum,
+          uint64 totalVotes,
+          bytes32[] executionHashes,
+          uint256[] optionsTotals
+        )
+    {
+        Vote storage vote_ = votes[_voteId];
+
+        open = _isVoteOpen(vote_);
+        executed = vote_.executed;
+        startDate = vote_.startDate;
+        snapshotBlock = vote_.snapshotBlock;
+        acceptQuorum = vote_.minAcceptQuorum;
+        totalVotes = vote_.totalVotes;
+        executionHashes = vote_.executionHashes;
+        optionsTotals = vote_.optionsTotals;
+    }
 
     function getVoterState(uint256 _voteId, address _voter) public view voteExists(_voteId) returns (bool[]) {
         return votes[_voteId].voters[_voter];

@@ -247,7 +247,7 @@ function changeSupportRequired(uint64 _supportRequired)
             bool executed,
             uint64 startDate,
             uint64 snapshotBlock,
-            uint64 supportRequired,
+            uint64 supportRequired_,
             uint256 yea,
             uint256 nay,
             bytes32 scriptHash
@@ -259,7 +259,7 @@ function changeSupportRequired(uint64 _supportRequired)
         executed = vote_.executed;
         startDate = vote_.startDate;
         snapshotBlock = vote_.snapshotBlock;
-        supportRequired = vote_.supportRequired;
+        supportRequired_ = vote_.supportRequired;
         yea = vote_.yea;
         nay = vote_.nay;
         scriptHash = vote_.executionScriptHash;
