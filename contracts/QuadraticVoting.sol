@@ -26,7 +26,7 @@ contract QuadraticVoting is IForwarder, AragonApp {
     string private constant ERROR_CHANGE_SUPPORT_PCTS = "VOTING_CHANGE_SUPPORT_PCTS";
     string private constant ERROR_CHANGE_QUORUM_PCTS = "VOTING_CHANGE_QUORUM_PCTS";
     string private constant ERROR_INIT_SUPPORT_TOO_BIG = "VOTING_INIT_SUPPORT_TOO_BIG";
-    string private constant ERROR_CHANGE_SUPPORT_TOO_BIG = "VOTING_CHANGE_SUPP_TOO_BIG";
+    string private constant ERROR_NO_VOTING_POWER = "ERROR_NO_VOTING_POWER";
     string private constant ERROR_CAN_NOT_VOTE = "VOTING_CAN_NOT_VOTE";
     string private constant ERROR_CAN_NOT_EXECUTE = "VOTING_CAN_NOT_EXECUTE";
     string private constant ERROR_CAN_NOT_FORWARD = "VOTING_CAN_NOT_FORWARD";
@@ -118,21 +118,6 @@ function changeSupportRequired(uint64 _supportRequired)
     emit ChangeSupportRequired(_supportRequired);
 }
 
-// /**
-// * @notice Change minimum acceptance quorum to `@formatPct(_minAcceptQuorum)`%
-// * @param _minAcceptQuorum New acceptance quorum
-// */
-// function changeminAcceptQuorum(uint64 _minAcceptQuorum)
-//     external
-//     authP(MODIFY_QUORUM_ROLE, arr(uint256(_minAcceptQuorum), uint256(minAcceptQuorum)))
-// {
-//     require(_minAcceptQuorum <= supportRequired, ERROR_CHANGE_QUORUM_PCTS);
-//     minAcceptQuorum = _minAcceptQuorum;
-//
-//     emit ChangeMinQuorum(_minAcceptQuorum);
-// }
-
-
     /**
     * @notice Create a new vote about "`_metadata`"
     * @param _executionScriptHash EVM script to be executed on approval
@@ -140,7 +125,7 @@ function changeSupportRequired(uint64 _supportRequired)
     * @return voteId Id for newly created vote
     */
     function newVote(bytes32 _executionScriptHash, string _metadata) external auth(CREATE_VOTES_ROLE) returns (uint256 voteId) {
-        return _newVote(_executionScriptHash, _metadata, true);
+        return _newVote(_executionScriptHash, _metadata, false);
     }
 
     /**
@@ -205,7 +190,7 @@ function changeSupportRequired(uint64 _supportRequired)
     }
 
     function isForwarder() public pure returns (bool) {
-        return true;
+        return false;
     }
 
     function forward(bytes _evmScript) public {
@@ -223,7 +208,6 @@ function changeSupportRequired(uint64 _supportRequired)
 
         return _isVoteOpen(vote_) && token.balanceOfAt(_voter, vote_.snapshotBlock) > 0;
     }
-
     function canExecute(uint256 _voteId, bytes _executionScript) public view voteExists(_voteId) returns (bool) {
         Vote storage vote_ = votes[_voteId];
 
@@ -233,7 +217,6 @@ function changeSupportRequired(uint64 _supportRequired)
         require(_verifyHash(_executionScript,vote_.executionScriptHash), 'INVALID EXECUTION SCRPIT');
 
         uint256 totalVotes = vote_.yea.add(vote_.nay);
-
         // Vote ended?
         if (_isVoteOpen(vote_)) {
             return false;
@@ -250,6 +233,38 @@ function changeSupportRequired(uint64 _supportRequired)
         return true;
     }
 
+    function getVoterState(uint256 _voteId, address _voter) public view voteExists(_voteId) returns (VoterOptions, uint256) {
+        VoterState storage state = votes[_voteId].voters[_voter];
+        return (state.option, state.numberOfVotes);
+    }
+
+    function getVote(uint256 _voteId)
+        public
+        view
+        voteExists(_voteId)
+        returns (
+            bool open,
+            bool executed,
+            uint64 startDate,
+            uint64 snapshotBlock,
+            uint64 supportRequired,
+            uint256 yea,
+            uint256 nay,
+            bytes32 scriptHash
+        )
+    {
+        Vote storage vote_ = votes[_voteId];
+
+        open = _isVoteOpen(vote_);
+        executed = vote_.executed;
+        startDate = vote_.startDate;
+        snapshotBlock = vote_.snapshotBlock;
+        supportRequired = vote_.supportRequired;
+        yea = vote_.yea;
+        nay = vote_.nay;
+        scriptHash = vote_.executionScriptHash;
+    }
+
     function _verifyHash(bytes _script, bytes32 _hash) internal returns(bool matched){
       matched = (keccak256(_script) == _hash);
     }
@@ -260,6 +275,10 @@ function changeSupportRequired(uint64 _supportRequired)
         internal
         returns (uint256 voteId)
     {
+        //Check if token has holders
+        uint256 votingPower = token.totalSupplyAt(vote_.snapshotBlock);
+        require(votingPower > 0, ERROR_NO_VOTING_POWER);
+
         voteId = votesLength++;
         Vote storage vote_ = votes[voteId];
         vote_.startDate = getTimestamp64();
@@ -282,18 +301,22 @@ function changeSupportRequired(uint64 _supportRequired)
     ) internal
     votingTermUpdater()
     {
+        //Lazy overflow protection - There's no pow() function implemented on SafeMath
+        require(_numVotes < 255 && _numVotes > 0);
 
         Vote storage vote_ = votes[_voteId];
         VoterState storage state = vote_.voters[_voter];
 
-        uint64 invested = state.numberOfVotes.mul(state.numberOfVotes);
-        votingBalance[_voter] = votingBalance[_voter].add(invested);
+        if(state.numberOfVotes > 0) {
+          uint64 invested = 2 ** state.numberOfVotes;
+          votingBalance[_voter] = votingBalance[_voter].add(invested);
 
-        // There's probably a more efficient way of checking changed votes
-        if (state.option == VoterOptions.Yea) {
-            vote_.yea = vote_.yea.sub(state.numberOfVotes);
-        } else if (state.option == VoterOptions.Nay) {
-            vote_.nay = vote_.nay.sub(state.numberOfVotes);
+          // There's probably a more efficient way of checking changed votes
+          if (state.option == VoterOptions.Yea) {
+              vote_.yea = vote_.yea.sub(state.numberOfVotes);
+          } else if (state.option == VoterOptions.Nay) {
+              vote_.nay = vote_.nay.sub(state.numberOfVotes);
+          }
         }
 
         if(registeredVoter[_voter] < votingTermStart){
@@ -301,7 +324,7 @@ function changeSupportRequired(uint64 _supportRequired)
           registeredVoter[_voter] = getTimestamp64();
         }
 
-        uint256 voteCost = _numVotes.mul(_numVotes);
+        uint256 voteCost = 2 ** _numVotes;
         require(votingBalance[_voter] >= voteCost, ERROR_NO_VOTING_BALANCE);
 
         votingBalance[_voter] = votingBalance[_voter].sub(voteCost);

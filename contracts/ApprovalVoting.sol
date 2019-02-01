@@ -144,7 +144,7 @@ contract ApprovalVoting is IForwarder, AragonApp {
     }
 
     function isForwarder() public pure returns (bool) {
-        return true;
+        return false;
     }
 
     /**
