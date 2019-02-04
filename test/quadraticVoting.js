@@ -52,7 +52,6 @@ contract('Quadratic Voting App', accounts => {
         APP_MANAGER_ROLE = await kernelBase.APP_MANAGER_ROLE()
         CREATE_VOTES_ROLE = await votingBase.CREATE_VOTES_ROLE()
         MODIFY_SUPPORT_ROLE = await votingBase.MODIFY_SUPPORT_ROLE()
-        MODIFY_QUORUM_ROLE = await votingBase.MODIFY_QUORUM_ROLE()
     })
 
     beforeEach(async () => {
@@ -65,7 +64,7 @@ contract('Quadratic Voting App', accounts => {
         voting = await QuadraticVoting.at(receipt.logs.filter(l => l.event == 'NewAppProxy')[0].args.proxy)
         await acl.createPermission(ANY_ADDR, voting.address, CREATE_VOTES_ROLE, root, { from: root })
         await acl.createPermission(ANY_ADDR, voting.address, MODIFY_SUPPORT_ROLE, root, { from: root })
-        await acl.createPermission(ANY_ADDR, voting.address, MODIFY_QUORUM_ROLE, root, { from: root })
+        //await acl.createPermission(ANY_ADDR, voting.address, MODIFY_QUORUM_ROLE, root, { from: root })
     })
 
     context('normal token supply, common tests', () => {
@@ -239,7 +238,7 @@ contract('Quadratic Voting App', accounts => {
 
               it('Votes are correctly priced', async () => {
                   const numberOfVotes = new BN(3);
-                  const cost = new BN(new BN(2).pow(numberOfVotes));
+                  const cost = new BN(numberOfVotes.pow(new BN(2)));
 
                   await voting.vote(voteId, false, 3,{ from: holder29 })
                   const balance = await voting.votingBalance(holder29);
@@ -253,7 +252,7 @@ contract('Quadratic Voting App', accounts => {
 
               it('Refunds voting balances correctly', async() => {
                 const numberOfVotes = new BN(2);
-                const cost = new BN(new BN(2).pow(numberOfVotes));
+                const cost = new BN(numberOfVotes.pow(new BN(2)));
 
                 await voting.vote(voteId, false, 3,{ from: holder29 })
                 const balance1 = await voting.votingBalance(holder29);
@@ -270,7 +269,7 @@ contract('Quadratic Voting App', accounts => {
 
               it('Can remove votes', async() => {
                 const numberOfVotes = new BN(2);
-                const cost = new BN(new BN(2).pow(numberOfVotes));
+                const cost = new BN(numberOfVotes.pow(new BN(2)));
 
                 await voting.vote(voteId, false, 3,{ from: holder29 })
                 await voting.removeVote(voteId,{ from: holder29 })

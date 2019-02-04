@@ -17,21 +17,15 @@ contract ApprovalVoting is IForwarder, AragonApp {
     using SafeMath64 for uint64;
 
     bytes32 public constant CREATE_VOTES_ROLE = keccak256("CREATE_VOTES_ROLE");
-    bytes32 public constant MODIFY_SUPPORT_ROLE = keccak256("MODIFY_SUPPORT_ROLE");
     bytes32 public constant MODIFY_QUORUM_ROLE = keccak256("MODIFY_QUORUM_ROLE");
 
-    uint64 public constant PCT_BASE = 10 ** 18; // 0% = 0; 1% = 10^16; 100% = 10^18
-
     string private constant ERROR_NO_VOTE = "VOTING_NO_VOTE";
-    string private constant ERROR_INIT_PCTS = "VOTING_INIT_PCTS";
-    string private constant ERROR_CHANGE_SUPPORT_PCTS = "VOTING_CHANGE_SUPPORT_PCTS";
-    string private constant ERROR_CHANGE_QUORUM_PCTS = "VOTING_CHANGE_QUORUM_PCTS";
-    string private constant ERROR_INIT_SUPPORT_TOO_BIG = "VOTING_INIT_SUPPORT_TOO_BIG";
-    string private constant ERROR_CHANGE_SUPPORT_TOO_BIG = "VOTING_CHANGE_SUPP_TOO_BIG";
     string private constant ERROR_CAN_NOT_VOTE = "VOTING_CAN_NOT_VOTE";
     string private constant ERROR_CAN_NOT_EXECUTE = "VOTING_CAN_NOT_EXECUTE";
     string private constant ERROR_CAN_NOT_FORWARD = "VOTING_CAN_NOT_FORWARD";
-    string private constant ERROR_NO_VOTING_POWER = "VOTING_NO_VOTING_POWER";
+    string private constant ERROR_INVALID_INPUT_LENGTH = "VOTING_WRONG_INPUT_LENGTH";
+    string private constant ERROR_INVALID_SCRIPT = "VOTING_INVALID_EXECUTION_SCRIPT";
+
 
 
     struct Vote {
@@ -119,7 +113,7 @@ contract ApprovalVoting is IForwarder, AragonApp {
     */
     function vote(uint256 _voteId, bool[] _approvals) external voteExists(_voteId) {
         require(canVote(_voteId, msg.sender), ERROR_CAN_NOT_VOTE);
-        require(_approvals.length == votes[_voteId].executionHashes.length);
+        require(_approvals.length == votes[_voteId].executionHashes.length, ERROR_INVALID_INPUT_LENGTH);
         _vote(_voteId, _approvals, msg.sender);
     }
 
@@ -172,7 +166,7 @@ contract ApprovalVoting is IForwarder, AragonApp {
         Vote storage vote_ = votes[_voteId];
 
         (bytes32 winningScritp, uint256 totalVotes) = getResults(_voteId);
-        require(_verifyHash(_executionScript,winningScritp), 'INVALID EXECUTION SCRPIT');
+        require(_verifyHash(_executionScript,winningScritp), ERROR_INVALID_SCRIPT);
 
         if (vote_.executed) {
             return false;

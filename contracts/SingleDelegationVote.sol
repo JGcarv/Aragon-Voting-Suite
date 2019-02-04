@@ -12,6 +12,11 @@ import "./Utils/Voting.sol";
 
 contract SingleDelegationVote is Voting {
 
+    // string private constant ERROR_INVALID_AMOUNT = "VOTING_INVALID_AMOUNT";
+    // string private constant ERROR_INVALID_BALANCE = "VOTING_INVALID_BALANCE";
+    // string private constant ERROR_INVALID_INPUT = "VOTING_INVALID_INPUT";
+    // string private constant ERROR_DOUBLE_VOTE = "VOTING_DOUBLE_VOTE";
+
 
     // SINGLE DELEGATION DATA STRUCTURES
     mapping (address => address) public representatives;
@@ -39,8 +44,8 @@ contract SingleDelegationVote is Voting {
   **/
   function getDelegatorStake(uint256 voteId, uint256 snapshotBlock) internal returns(uint256 totalStake){
     address _representative = msg.sender;
-    totalStake = 0;
     address _represented;
+    totalStake = 0;
     for(uint256 i = 0; i < representedsLength[_representative]; i++) {
       _represented = representeds[_representative][i];
 
@@ -113,7 +118,7 @@ contract SingleDelegationVote is Voting {
     }
 
     function transferGasCredits(address _from, address _to, uint256 _amount) internal {
-      require(_amount <= gasCreditsBalance[_from], "Not Enough balance");
+      require(_amount <= gasCreditsBalance[_from]);
       gasCreditsBalance[_to] = gasCreditsBalance[_to].add(_amount);
       gasCreditsBalance[_from] = gasCreditsBalance[_from].sub(_amount);
     }
@@ -156,7 +161,6 @@ contract SingleDelegationVote is Voting {
 
       -------------------------------------------------------
     **/
-event DEBUG(uint value);
   function _voteAsIndividual(
     uint256 _voteId,
     bool _supports,

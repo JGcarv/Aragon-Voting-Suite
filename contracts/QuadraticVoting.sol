@@ -19,18 +19,17 @@ contract QuadraticVoting is IForwarder, AragonApp {
 
     bytes32 public constant CREATE_VOTES_ROLE = keccak256("CREATE_VOTES_ROLE");
     bytes32 public constant MODIFY_SUPPORT_ROLE = keccak256("MODIFY_SUPPORT_ROLE");
-    bytes32 public constant MODIFY_QUORUM_ROLE = keccak256("MODIFY_QUORUM_ROLE");
 
     string private constant ERROR_NO_VOTE = "VOTING_NO_VOTE";
-    string private constant ERROR_INIT_PCTS = "VOTING_INIT_PCTS";
+    string private constant ERROR_NO_VOTE_CASTED = "VOTING_NO_VOTE_CASTED";
     string private constant ERROR_CHANGE_SUPPORT_PCTS = "VOTING_CHANGE_SUPPORT_PCTS";
-    string private constant ERROR_CHANGE_QUORUM_PCTS = "VOTING_CHANGE_QUORUM_PCTS";
-    string private constant ERROR_INIT_SUPPORT_TOO_BIG = "VOTING_INIT_SUPPORT_TOO_BIG";
-    string private constant ERROR_NO_VOTING_POWER = "ERROR_NO_VOTING_POWER";
+    string private constant ERROR_NO_VOTING_POWER = "VOTING_NO_VOTING_POWER";
     string private constant ERROR_CAN_NOT_VOTE = "VOTING_CAN_NOT_VOTE";
     string private constant ERROR_CAN_NOT_EXECUTE = "VOTING_CAN_NOT_EXECUTE";
     string private constant ERROR_CAN_NOT_FORWARD = "VOTING_CAN_NOT_FORWARD";
     string private constant ERROR_NO_VOTING_BALANCE = "VOTING_NO_VOTING_BALANCE";
+    string private constant ERROR_INVALID_SCRIPT = "VOTING_INVALID_EXECUTION_SCRIPT";
+    string private constant ERROR_NUMBER_OF_VOTES = "VOTING_NUMBER_OF_VOTES";
 
     enum VoterOptions { Absent, Yea, Nay }
 
@@ -106,17 +105,17 @@ contract QuadraticVoting is IForwarder, AragonApp {
     }
 
     /**
-* @notice Change required support to `@formatPct(_supportRequired)`%
-* @param _supportRequired New required support
-*/
-function changeSupportRequired(uint64 _supportRequired)
-    external
-    authP(MODIFY_SUPPORT_ROLE, arr(uint256(_supportRequired), uint256(supportRequired)))
-{
-    supportRequired = _supportRequired;
+    * @notice Change required support to `@formatPct(_supportRequired)`%
+    * @param _supportRequired New required support
+    */
+    function changeSupportRequired(uint64 _supportRequired)
+        external
+        authP(MODIFY_SUPPORT_ROLE, arr(uint256(_supportRequired), uint256(supportRequired)))
+    {
+        supportRequired = _supportRequired;
 
-    emit ChangeSupportRequired(_supportRequired);
-}
+        emit ChangeSupportRequired(_supportRequired);
+    }
 
     /**
     * @notice Create a new vote about "`_metadata`"
@@ -170,10 +169,15 @@ function changeSupportRequired(uint64 _supportRequired)
     }
 
 
+    /**
+    * @notice Removes a single vote from `_voteId`
+    * @dev Toremove all votes call `vote` with 0 as number of votes
+    * @param _voteId Id for vote
+    */
     function removeVote(uint256 _voteId) external voteExists(_voteId) {
       Vote storage vote_ = votes[_voteId];
       VoterState storage state = vote_.voters[msg.sender];
-      require(state.numberOfVotes > 0);
+      require(state.numberOfVotes > 0, ERROR_NO_VOTE_CASTED);
       bool support_ = state.option == VoterOptions.Yea ? true : false;
       _vote(_voteId, support_, state.numberOfVotes.sub(1), msg.sender);
     }
@@ -205,16 +209,16 @@ function changeSupportRequired(uint64 _supportRequired)
 
     function canVote(uint256 _voteId, address _voter) public view voteExists(_voteId) returns (bool) {
         Vote storage vote_ = votes[_voteId];
-
         return _isVoteOpen(vote_) && token.balanceOfAt(_voter, vote_.snapshotBlock) > 0;
     }
+
     function canExecute(uint256 _voteId, bytes _executionScript) public view voteExists(_voteId) returns (bool) {
         Vote storage vote_ = votes[_voteId];
 
         if (vote_.executed) {
             return false;
         }
-        require(_verifyHash(_executionScript,vote_.executionScriptHash), 'INVALID EXECUTION SCRPIT');
+        require(_verifyHash(_executionScript,vote_.executionScriptHash), ERROR_INVALID_SCRIPT);
 
         uint256 totalVotes = vote_.yea.add(vote_.nay);
         // Vote ended?
@@ -302,21 +306,19 @@ function changeSupportRequired(uint64 _supportRequired)
     votingTermUpdater()
     {
         //Lazy overflow protection - There's no pow() function implemented on SafeMath
-        require(_numVotes < 255 && _numVotes > 0);
+        require(_numVotes < 255, ERROR_NUMBER_OF_VOTES);
 
         Vote storage vote_ = votes[_voteId];
         VoterState storage state = vote_.voters[_voter];
 
-        if(state.numberOfVotes > 0) {
-          uint64 invested = 2 ** state.numberOfVotes;
-          votingBalance[_voter] = votingBalance[_voter].add(invested);
+        uint64 invested = state.numberOfVotes.mul(state.numberOfVotes);
+        votingBalance[_voter] = votingBalance[_voter].add(invested);
 
-          // There's probably a more efficient way of checking changed votes
-          if (state.option == VoterOptions.Yea) {
-              vote_.yea = vote_.yea.sub(state.numberOfVotes);
-          } else if (state.option == VoterOptions.Nay) {
-              vote_.nay = vote_.nay.sub(state.numberOfVotes);
-          }
+        // There's probably a more efficient way of checking changed votes
+        if (state.option == VoterOptions.Yea) {
+            vote_.yea = vote_.yea.sub(state.numberOfVotes);
+        } else if (state.option == VoterOptions.Nay) {
+            vote_.nay = vote_.nay.sub(state.numberOfVotes);
         }
 
         if(registeredVoter[_voter] < votingTermStart){
@@ -324,7 +326,7 @@ function changeSupportRequired(uint64 _supportRequired)
           registeredVoter[_voter] = getTimestamp64();
         }
 
-        uint256 voteCost = 2 ** _numVotes;
+        uint256 voteCost =  _numVotes.mul(_numVotes);
         require(votingBalance[_voter] >= voteCost, ERROR_NO_VOTING_BALANCE);
 
         votingBalance[_voter] = votingBalance[_voter].sub(voteCost);
